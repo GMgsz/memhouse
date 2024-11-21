@@ -1,5 +1,5 @@
 <template>
-  <view class="poetry-creation">
+  <view class="poetry-creation" v-show="isPageShowing">
     <!-- 顶部导航栏 -->
     <view class="header">
       <view class="status-bar" :style="{ height: statusBarHeight + 'px' }"></view>
@@ -107,9 +107,11 @@ export default {
       imageUrl: '',
       keywords: [],
       selectedTags: [],
-      poetryStyles: ['唐诗', '宋词', '元曲', '现代诗', '藏头诗'],
+      poetryStyles: ['唐诗', '宋词', '元曲', '现代诗'],
       selectedStyle: '',
-      generatedPoem: ''
+      generatedPoem: '',
+      isDirectEntry: false,
+      isPageShowing: true,
     }
   },
   
@@ -123,6 +125,35 @@ export default {
     // 获取状态栏高度
     const systemInfo = uni.getSystemInfoSync()
     this.statusBarHeight = systemInfo.statusBarHeight
+    
+    // 检查页面栈
+    const pages = getCurrentPages()
+    if (pages.length === 1) {
+      // 如果直接打开本页面，添加一个标记
+      this.isDirectEntry = true
+    }
+  },
+  
+  onShow() {
+    this.isPageShowing = true
+  },
+  
+  onHide() {
+    this.isPageShowing = false
+  },
+  
+  onUnload() {
+    this.isPageShowing = false
+  },
+  
+  // 添加页面切换步骤的控制
+  watch: {
+    currentStep(newVal) {
+      // 步骤切换时，确保页面内容正确显示
+      this.$nextTick(() => {
+        this.isPageShowing = true
+      })
+    }
   },
   
   methods: {
@@ -209,13 +240,29 @@ export default {
       this.selectedStyle = style
     },
     
+    formatPoem(poem) {
+      if (!poem) return ''
+      
+      // 修改格式化方法，减少空行
+      let formatted = poem
+        // 在句号和逗号后添加换行
+        .replace(/([，。])/g, '$1\n')
+        // 删除多余的换行
+        .replace(/\n+/g, '\n')
+        // 删除行首和行尾的空白
+        .trim();
+      
+      return formatted; // 移除了额外添加空行的处理
+    },
+    
     async createPoem() {
       try {
         uni.showLoading({ title: '创作中...' });
         const result = await createPoem(this.selectedTags, this.selectedStyle);
         
         if (result && result.status === 'success') {
-          this.generatedPoem = result.poem;
+          // 使用格式化方法处理诗歌
+          this.generatedPoem = this.formatPoem(result.poem);
           this.currentStep = 2;
         } else {
           throw new Error(result?.message || '未能生成诗歌');
@@ -244,7 +291,7 @@ export default {
     },
     
     shareCard() {
-      // TODO: 实现分享卡片功能
+      // TODO: 实分享卡片功能
     },
     
     restart() {
@@ -257,9 +304,18 @@ export default {
     },
     
     goHome() {
-      uni.switchTab({
-        url: '/pages/index/index'
-      })
+      const pages = getCurrentPages()
+      if (this.isDirectEntry || pages.length === 1) {
+        // 如果是直接打开的页面或者只有一个页面，使用 redirectTo
+        uni.redirectTo({
+          url: '/pages/index/index'
+        })
+      } else {
+        // 如果有多个页面，使用 navigateBack
+        uni.navigateBack({
+          delta: pages.length - 1 // 返回到首页
+        })
+      }
     }
   }
 }
@@ -269,6 +325,12 @@ export default {
 .poetry-creation {
   min-height: 100vh;
   background: #FFF5E7;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
   
   .header {
     width: 100%;
@@ -332,24 +394,26 @@ export default {
       
       :deep(.uni-steps) {
         .uni-steps__column-title {
-          font-size: 32rpx;
+          font-size: 36rpx;
           font-weight: 600;
           color: #333;
+          margin-top: 16rpx;
         }
         
         .uni-steps__column-circle {
-          width: 44rpx;
-          height: 44rpx;
+          width: 56rpx;
+          height: 56rpx;
         }
         
         .uni-steps__column-line {
           background-color: #ddd;
-          height: 3px;
+          height: 4px;
+          margin-top: 28rpx;
         }
         
         .uni-steps__column-circle-active {
-          width: 44rpx;
-          height: 44rpx;
+          width: 56rpx;
+          height: 56rpx;
           background-color: #FF9500;
         }
       }
@@ -361,6 +425,7 @@ export default {
   }
   
   .upload-box {
+    margin: 30rpx 0;
     width: 100%;
     height: 400rpx;
     border: 2rpx dashed #ddd;
@@ -381,7 +446,8 @@ export default {
   .preview-image {
     width: 100%;
     height: 400rpx;
-    border-radius: 16rpx;
+    border-radius: 12rpx;
+    object-fit: contain;
   }
   
   .section-title {
@@ -404,7 +470,7 @@ export default {
     color: #333;
     
     &.tag-selected {
-      background: #007AFF;
+      background: #FF9500;
       color: #fff;
     }
   }
@@ -423,7 +489,7 @@ export default {
     color: #333;
     
     &.style-selected {
-      background: #007AFF;
+      background: #FF9500;
       color: #fff;
     }
   }
@@ -432,7 +498,7 @@ export default {
   .create-btn {
     margin-top: 40rpx;
     width: 100%;
-    background: #007AFF;
+    background: #FF9500;
     color: #fff;
     border-radius: 100rpx;
     font-size: 32rpx;
@@ -441,21 +507,64 @@ export default {
     &:disabled {
       background: #ccc;
     }
+    
+    &:active {
+      opacity: 0.9;
+    }
   }
   
   .poem-display {
-    background: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(10px);
-    padding: 40rpx;
+    padding: 80rpx 40rpx;
     border-radius: 24rpx;
-    box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4rpx 30rpx rgba(0, 0, 0, 0.08);
     margin: 30rpx 0;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 500rpx;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 6rpx;
+      background: linear-gradient(90deg, #FF9500, #FFB700);
+    }
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 6rpx;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image: linear-gradient(rgba(255, 149, 0, 0.03) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255, 149, 0, 0.03) 1px, transparent 1px);
+      background-size: 20px 20px;
+      z-index: 0;
+    }
   }
   
   .poem-text {
-    font-size: 32rpx;
+    font-size: 48rpx;
     line-height: 1.8;
     white-space: pre-wrap;
+    font-family: "楷体", "KaiTi", "STKaiti", serif;
+    text-align: center;
+    color: #333;
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    padding: 0 40rpx;
+    
+    display: block;
+    margin: 0 auto;
   }
   
   .action-buttons {
@@ -463,17 +572,25 @@ export default {
     grid-template-columns: repeat(2, 1fr);
     gap: 20rpx;
     margin: 30rpx 0;
+    padding: 0;
   }
   
   .action-btn {
-    background: #f5f5f5;
+    height: 96rpx;
+    line-height: 96rpx;
+    background: #fff;
     color: #333;
     border-radius: 100rpx;
-    font-size: 28rpx;
+    font-size: 32rpx;
     font-weight: 500;
+    border: 2rpx solid #eee;
+    transition: all 0.2s ease;
     
     &:active {
-      opacity: 0.8;
+      background-color: #FF9500 !important;
+      border-color: #FF9500;
+      opacity: 0.9;
+      transform: scale(0.98);
     }
   }
 }
@@ -481,17 +598,28 @@ export default {
 .image-preview-container {
   position: relative;
   width: 100%;
+  margin: 30rpx 0;
+  padding: 20rpx;
+  background: #FFFFFF;
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
   
   .reupload-btn {
-    position: absolute;
-    right: 20rpx;
-    bottom: 20rpx;
-    background: rgba(0, 0, 0, 0.6);
-    color: #fff;
-    font-size: 24rpx;
-    padding: 10rpx 20rpx;
-    border-radius: 30rpx;
+    margin-top: 20rpx;
+    width: 100%;
+    height: 80rpx;
+    line-height: 80rpx;
+    text-align: center;
+    background: #f5f5f5;
+    color: #333;
+    font-size: 28rpx;
+    border-radius: 100rpx;
     border: none;
+    
+    &:active {
+      opacity: 0.8;
+    }
   }
 }
 

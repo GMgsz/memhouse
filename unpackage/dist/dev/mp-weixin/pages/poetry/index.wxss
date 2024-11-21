@@ -26,6 +26,12 @@
 .poetry-creation {
   min-height: 100vh;
   background: #FFF5E7;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
 }
 .poetry-creation .header {
   width: 100%;
@@ -81,27 +87,30 @@
   margin: 40rpx 0;
 }
 .poetry-creation .content .steps-container .uni-steps .uni-steps__column-title {
-  font-size: 32rpx;
+  font-size: 36rpx;
   font-weight: 600;
   color: #333;
+  margin-top: 16rpx;
 }
 .poetry-creation .content .steps-container .uni-steps .uni-steps__column-circle {
-  width: 44rpx;
-  height: 44rpx;
+  width: 56rpx;
+  height: 56rpx;
 }
 .poetry-creation .content .steps-container .uni-steps .uni-steps__column-line {
   background-color: #ddd;
-  height: 3px;
+  height: 4px;
+  margin-top: 28rpx;
 }
 .poetry-creation .content .steps-container .uni-steps .uni-steps__column-circle-active {
-  width: 44rpx;
-  height: 44rpx;
+  width: 56rpx;
+  height: 56rpx;
   background-color: #FF9500;
 }
 .poetry-creation .step-content {
   margin: 30rpx 0;
 }
 .poetry-creation .upload-box {
+  margin: 30rpx 0;
   width: 100%;
   height: 400rpx;
   border: 2rpx dashed #ddd;
@@ -120,7 +129,8 @@
 .poetry-creation .preview-image {
   width: 100%;
   height: 400rpx;
-  border-radius: 16rpx;
+  border-radius: 12rpx;
+  object-fit: contain;
 }
 .poetry-creation .section-title {
   font-size: 32rpx;
@@ -140,7 +150,7 @@
   color: #333;
 }
 .poetry-creation .tag.tag-selected {
-  background: #007AFF;
+  background: #FF9500;
   color: #fff;
 }
 .poetry-creation .style-container {
@@ -156,14 +166,14 @@
   color: #333;
 }
 .poetry-creation .style-item.style-selected {
-  background: #007AFF;
+  background: #FF9500;
   color: #fff;
 }
 .poetry-creation .analyze-btn,
 .poetry-creation .create-btn {
   margin-top: 40rpx;
   width: 100%;
-  background: #007AFF;
+  background: #FF9500;
   color: #fff;
   border-radius: 100rpx;
   font-size: 32rpx;
@@ -173,50 +183,107 @@
 .poetry-creation .create-btn:disabled {
   background: #ccc;
 }
+.poetry-creation .analyze-btn:active,
+.poetry-creation .create-btn:active {
+  opacity: 0.9;
+}
 .poetry-creation .poem-display {
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.85);
   -webkit-backdrop-filter: blur(10px);
           backdrop-filter: blur(10px);
-  padding: 40rpx;
+  padding: 80rpx 40rpx;
   border-radius: 24rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4rpx 30rpx rgba(0, 0, 0, 0.08);
   margin: 30rpx 0;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 500rpx;
+}
+.poetry-creation .poem-display::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6rpx;
+  background: linear-gradient(90deg, #FF9500, #FFB700);
+}
+.poetry-creation .poem-display::after {
+  content: "";
+  position: absolute;
+  top: 6rpx;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: linear-gradient(rgba(255, 149, 0, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 149, 0, 0.03) 1px, transparent 1px);
+  background-size: 20px 20px;
+  z-index: 0;
 }
 .poetry-creation .poem-text {
-  font-size: 32rpx;
+  font-size: 48rpx;
   line-height: 1.8;
   white-space: pre-wrap;
+  font-family: "楷体", "KaiTi", "STKaiti", serif;
+  text-align: center;
+  color: #333;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 0 40rpx;
+  display: block;
+  margin: 0 auto;
 }
 .poetry-creation .action-buttons {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 20rpx;
   margin: 30rpx 0;
+  padding: 0;
 }
 .poetry-creation .action-btn {
-  background: #f5f5f5;
+  height: 96rpx;
+  line-height: 96rpx;
+  background: #fff;
   color: #333;
   border-radius: 100rpx;
-  font-size: 28rpx;
+  font-size: 32rpx;
   font-weight: 500;
+  border: 2rpx solid #eee;
+  transition: all 0.2s ease;
 }
 .poetry-creation .action-btn:active {
-  opacity: 0.8;
+  background-color: #FF9500 !important;
+  border-color: #FF9500;
+  opacity: 0.9;
+  transform: scale(0.98);
 }
 .image-preview-container {
   position: relative;
   width: 100%;
+  margin: 30rpx 0;
+  padding: 20rpx;
+  background: #FFFFFF;
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
 }
 .image-preview-container .reupload-btn {
-  position: absolute;
-  right: 20rpx;
-  bottom: 20rpx;
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  font-size: 24rpx;
-  padding: 10rpx 20rpx;
-  border-radius: 30rpx;
+  margin-top: 20rpx;
+  width: 100%;
+  height: 80rpx;
+  line-height: 80rpx;
+  text-align: center;
+  background: #f5f5f5;
+  color: #333;
+  font-size: 28rpx;
+  border-radius: 100rpx;
   border: none;
+}
+.image-preview-container .reupload-btn:active {
+  opacity: 0.8;
 }
 .steps-container {
   margin: 30rpx 0;

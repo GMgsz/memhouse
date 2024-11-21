@@ -14,9 +14,11 @@ const _sfc_main = {
       imageUrl: "",
       keywords: [],
       selectedTags: [],
-      poetryStyles: ["唐诗", "宋词", "元曲", "现代诗", "藏头诗"],
+      poetryStyles: ["唐诗", "宋词", "元曲", "现代诗"],
       selectedStyle: "",
-      generatedPoem: ""
+      generatedPoem: "",
+      isDirectEntry: false,
+      isPageShowing: true
     };
   },
   computed: {
@@ -27,6 +29,27 @@ const _sfc_main = {
   onLoad() {
     const systemInfo = common_vendor.index.getSystemInfoSync();
     this.statusBarHeight = systemInfo.statusBarHeight;
+    const pages = getCurrentPages();
+    if (pages.length === 1) {
+      this.isDirectEntry = true;
+    }
+  },
+  onShow() {
+    this.isPageShowing = true;
+  },
+  onHide() {
+    this.isPageShowing = false;
+  },
+  onUnload() {
+    this.isPageShowing = false;
+  },
+  // 添加页面切换步骤的控制
+  watch: {
+    currentStep(newVal) {
+      this.$nextTick(() => {
+        this.isPageShowing = true;
+      });
+    }
   },
   methods: {
     goBack() {
@@ -101,12 +124,18 @@ const _sfc_main = {
     selectStyle(style) {
       this.selectedStyle = style;
     },
+    formatPoem(poem) {
+      if (!poem)
+        return "";
+      let formatted = poem.replace(/([，。])/g, "$1\n").replace(/\n+/g, "\n").trim();
+      return formatted;
+    },
     async createPoem() {
       try {
         common_vendor.index.showLoading({ title: "创作中..." });
         const result = await utils_aiService.createPoem(this.selectedTags, this.selectedStyle);
         if (result && result.status === "success") {
-          this.generatedPoem = result.poem;
+          this.generatedPoem = this.formatPoem(result.poem);
           this.currentStep = 2;
         } else {
           throw new Error((result == null ? void 0 : result.message) || "未能生成诗歌");
@@ -143,9 +172,17 @@ const _sfc_main = {
       this.generatedPoem = "";
     },
     goHome() {
-      common_vendor.index.switchTab({
-        url: "/pages/index/index"
-      });
+      const pages = getCurrentPages();
+      if (this.isDirectEntry || pages.length === 1) {
+        common_vendor.index.redirectTo({
+          url: "/pages/index/index"
+        });
+      } else {
+        common_vendor.index.navigateBack({
+          delta: pages.length - 1
+          // 返回到首页
+        });
+      }
     }
   }
 };
@@ -219,7 +256,9 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
     v: common_vendor.o((...args) => $options.shareCard && $options.shareCard(...args)),
     w: common_vendor.o((...args) => $options.restart && $options.restart(...args)),
     x: common_vendor.o((...args) => $options.goHome && $options.goHome(...args))
-  } : {});
+  } : {}, {
+    y: $data.isPageShowing
+  });
 }
 const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render], ["__file", "E:/Project/Front/memhouse_front/pages/poetry/index.vue"]]);
 wx.createPage(MiniProgramPage);
