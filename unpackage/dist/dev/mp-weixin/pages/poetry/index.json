@@ -1,0 +1,9 @@
+{
+  "navigationStyle": "custom",
+  "navigationBarTitleText": "诗歌创作",
+  "usingComponents": {
+    "uni-nav-bar": "../../uni_modules/uni-nav-bar/components/uni-nav-bar/uni-nav-bar",
+    "uni-steps": "../../uni_modules/uni-steps/components/uni-steps/uni-steps",
+    "uni-icons": "../../uni_modules/uni-icons/components/uni-icons/uni-icons"
+  }
+}
