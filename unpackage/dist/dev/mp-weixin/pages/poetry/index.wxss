@@ -25,27 +25,81 @@
 /* 文章场景相关 */
 .poetry-creation {
   min-height: 100vh;
-  background: linear-gradient(180deg, #FFF5E7 0%, #FFFFFF 100%);
+  background: #FFF5E7;
 }
-.poetry-creation .uni-nav-bar {
-  background: transparent !important;
+.poetry-creation .header {
+  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 999;
+  background-color: #FFF5E7;
 }
-.poetry-creation .uni-nav-bar .uni-nav-bar__text {
-  font-size: 32rpx;
-  font-weight: 500;
-  color: #222222;
+.poetry-creation .header .status-bar {
+  width: 100%;
+  background-color: #FFF5E7;
 }
-.poetry-creation .uni-nav-bar .uni-nav-bar__header {
-  padding: 0 30rpx;
+.poetry-creation .header .header-content {
+  position: relative;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 15px;
 }
-.poetry-creation .uni-nav-bar .uni-nav-bar__left-icon {
-  color: #222222;
+.poetry-creation .header .header-content .header-left {
+  position: relative;
+  z-index: 1;
+  height: 44px;
+  display: flex;
+  align-items: center;
+}
+.poetry-creation .header .header-content .header-center {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.poetry-creation .header .header-content .header-center .title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #4B5563;
+}
+.poetry-creation .header .header-content .header-right {
+  width: 24px;
 }
 .poetry-creation .content {
-  padding: 180rpx 30rpx 30rpx;
+  padding-top: calc(44px + var(--status-bar-height));
+  padding-left: 30rpx;
+  padding-right: 30rpx;
+}
+.poetry-creation .content .steps-container {
+  margin: 40rpx 0;
+}
+.poetry-creation .content .steps-container .uni-steps .uni-steps__column-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+}
+.poetry-creation .content .steps-container .uni-steps .uni-steps__column-circle {
+  width: 44rpx;
+  height: 44rpx;
+}
+.poetry-creation .content .steps-container .uni-steps .uni-steps__column-line {
+  background-color: #ddd;
+  height: 3px;
+}
+.poetry-creation .content .steps-container .uni-steps .uni-steps__column-circle-active {
+  width: 44rpx;
+  height: 44rpx;
+  background-color: #FF9500;
 }
 .poetry-creation .step-content {
-  margin-top: 40rpx;
+  margin: 30rpx 0;
 }
 .poetry-creation .upload-box {
   width: 100%;
@@ -126,6 +180,7 @@
   padding: 40rpx;
   border-radius: 24rpx;
   box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+  margin: 30rpx 0;
 }
 .poetry-creation .poem-text {
   font-size: 32rpx;
@@ -136,6 +191,7 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 20rpx;
+  margin: 30rpx 0;
 }
 .poetry-creation .action-btn {
   background: #f5f5f5;
@@ -167,17 +223,17 @@
   padding: 20rpx;
 }
 .steps-container .uni-steps .uni-steps__column-title {
-  font-size: 32rpx;
-  font-weight: 600;
+  font-size: 28rpx;
+  font-weight: 500;
 }
 .steps-container .uni-steps .uni-steps__column-circle {
-  width: 40rpx;
-  height: 40rpx;
+  width: 36rpx;
+  height: 36rpx;
 }
 .steps-container .uni-steps .uni-steps__column-line {
   background-color: #ddd;
   height: 4rpx;
 }
 .steps-container .uni-steps .uni-steps__column-container {
-  margin-bottom: 30rpx;
+  margin-bottom: 20rpx;
 }

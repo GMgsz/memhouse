@@ -1,22 +1,27 @@
 <template>
   <view class="poetry-creation">
     <!-- 顶部导航栏 -->
-    <uni-nav-bar
-      left-icon="left"
-      @clickLeft="handleBack"
-      title="诗歌创作"
-      :border="false"
-      status-bar
-      fixed
-    />
+    <view class="header">
+      <view class="status-bar" :style="{ height: statusBarHeight + 'px' }"></view>
+      <view class="header-content">
+        <view class="header-left" @tap="goBack">
+          <uni-icons type="back" size="24" color="#333"/>
+        </view>
+        <view class="header-center">
+          <text class="title">诗歌创作</text>
+        </view>
+        <view class="header-right"></view>
+      </view>
+    </view>
     
-    <!-- 主体内容，使用steps组件来显示创作步骤 -->
+    <!-- 主体内容 -->
     <view class="content">
+      <!-- 步骤条 -->
       <view class="steps-container">
         <uni-steps
           :options="steps"
           :active="currentStep"
-          direction="column"
+          direction="row"
           activeColor="#FF9500"
         />
       </view>
@@ -72,7 +77,7 @@
       <!-- 步骤3：展示结果 -->
       <view v-if="currentStep === 2" class="step-content">
         <view class="poem-display">
-          <text class="poem-text">{{ generatedPoem }}</text>
+          <text class="poem-text" user-select>{{ generatedPoem }}</text>
         </view>
         
         <view class="action-buttons">
@@ -92,6 +97,7 @@ import { analyzeImage, createPoem } from '@/utils/ai-service'
 export default {
   data() {
     return {
+      statusBarHeight: 0,
       steps: [
         { title: '上传图片' },
         { title: '选择标签' },
@@ -113,12 +119,34 @@ export default {
     }
   },
   
+  onLoad() {
+    // 获取状态栏高度
+    const systemInfo = uni.getSystemInfoSync()
+    this.statusBarHeight = systemInfo.statusBarHeight
+  },
+  
   methods: {
-    handleBack() {
+    goBack() {
       if (this.currentStep > 0) {
+        // 如果不是第一步，返回上一步
         this.currentStep--
+        
+        // 如果返回到第一步，清空关键词和选择
+        if (this.currentStep === 0) {
+          this.keywords = []
+          this.selectedTags = []
+          this.selectedStyle = ''
+        }
       } else {
-        uni.navigateBack()
+        // 如果是第一步，才判断是否返回首页
+        const pages = getCurrentPages()
+        if (pages.length === 1) {
+          uni.switchTab({
+            url: '/pages/index/index'
+          })
+        } else {
+          uni.navigateBack()
+        }
       }
     },
     
@@ -229,8 +257,8 @@ export default {
     },
     
     goHome() {
-      uni.navigateBack({
-        delta: 1
+      uni.switchTab({
+        url: '/pages/index/index'
       })
     }
   }
@@ -240,32 +268,96 @@ export default {
 <style lang="scss">
 .poetry-creation {
   min-height: 100vh;
-  background: linear-gradient(180deg, #FFF5E7 0%, #FFFFFF 100%);
+  background: #FFF5E7;
   
-  :deep(.uni-nav-bar) {
-    background: transparent !important;
+  .header {
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 999;
+    background-color: #FFF5E7;
     
-    .uni-nav-bar__text {
-      font-size: 32rpx;
-      font-weight: 500;
-      color: #222222;
+    .status-bar {
+      width: 100%;
+      background-color: #FFF5E7;
     }
     
-    .uni-nav-bar__header {
-      padding: 0 30rpx;
-    }
-    
-    .uni-nav-bar__left-icon {
-      color: #222222;
+    .header-content {
+      position: relative;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 15px;
+      
+      .header-left {
+        position: relative;
+        z-index: 1;
+        height: 44px;
+        display: flex;
+        align-items: center;
+      }
+      
+      .header-center {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        
+        .title {
+          font-size: 18px;
+          font-weight: 600;
+          color: #4B5563;
+        }
+      }
+      
+      .header-right {
+        width: 24px; // 保持左右对称
+      }
     }
   }
   
   .content {
-    padding: 180rpx 30rpx 30rpx;
+    padding-top: calc(44px + var(--status-bar-height));
+    padding-left: 30rpx;
+    padding-right: 30rpx;
+    
+    .steps-container {
+      margin: 40rpx 0;
+      
+      :deep(.uni-steps) {
+        .uni-steps__column-title {
+          font-size: 32rpx;
+          font-weight: 600;
+          color: #333;
+        }
+        
+        .uni-steps__column-circle {
+          width: 44rpx;
+          height: 44rpx;
+        }
+        
+        .uni-steps__column-line {
+          background-color: #ddd;
+          height: 3px;
+        }
+        
+        .uni-steps__column-circle-active {
+          width: 44rpx;
+          height: 44rpx;
+          background-color: #FF9500;
+        }
+      }
+    }
   }
   
   .step-content {
-    margin-top: 40rpx;
+    margin: 30rpx 0;
   }
   
   .upload-box {
@@ -357,6 +449,7 @@ export default {
     padding: 40rpx;
     border-radius: 24rpx;
     box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+    margin: 30rpx 0;
   }
   
   .poem-text {
@@ -369,6 +462,7 @@ export default {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 20rpx;
+    margin: 30rpx 0;
   }
   
   .action-btn {
@@ -407,13 +501,13 @@ export default {
   
   :deep(.uni-steps) {
     .uni-steps__column-title {
-      font-size: 32rpx;
-      font-weight: 600;
+      font-size: 28rpx;
+      font-weight: 500;
     }
     
     .uni-steps__column-circle {
-      width: 40rpx;
-      height: 40rpx;
+      width: 36rpx;
+      height: 36rpx;
     }
     
     .uni-steps__column-line {
@@ -422,7 +516,7 @@ export default {
     }
     
     .uni-steps__column-container {
-      margin-bottom: 30rpx;
+      margin-bottom: 20rpx;
     }
   }
 }

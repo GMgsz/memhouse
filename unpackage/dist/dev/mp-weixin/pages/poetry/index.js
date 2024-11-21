@@ -4,6 +4,7 @@ const utils_aiService = require("../../utils/ai-service.js");
 const _sfc_main = {
   data() {
     return {
+      statusBarHeight: 0,
       steps: [
         { title: "上传图片" },
         { title: "选择标签" },
@@ -23,12 +24,28 @@ const _sfc_main = {
       return this.selectedTags.length > 0 && this.selectedStyle;
     }
   },
+  onLoad() {
+    const systemInfo = common_vendor.index.getSystemInfoSync();
+    this.statusBarHeight = systemInfo.statusBarHeight;
+  },
   methods: {
-    handleBack() {
+    goBack() {
       if (this.currentStep > 0) {
         this.currentStep--;
+        if (this.currentStep === 0) {
+          this.keywords = [];
+          this.selectedTags = [];
+          this.selectedStyle = "";
+        }
       } else {
-        common_vendor.index.navigateBack();
+        const pages = getCurrentPages();
+        if (pages.length === 1) {
+          common_vendor.index.switchTab({
+            url: "/pages/index/index"
+          });
+        } else {
+          common_vendor.index.navigateBack();
+        }
       }
     },
     async chooseImage() {
@@ -126,60 +143,57 @@ const _sfc_main = {
       this.generatedPoem = "";
     },
     goHome() {
-      common_vendor.index.navigateBack({
-        delta: 1
+      common_vendor.index.switchTab({
+        url: "/pages/index/index"
       });
     }
   }
 };
 if (!Array) {
-  const _easycom_uni_nav_bar2 = common_vendor.resolveComponent("uni-nav-bar");
-  const _easycom_uni_steps2 = common_vendor.resolveComponent("uni-steps");
   const _easycom_uni_icons2 = common_vendor.resolveComponent("uni-icons");
-  (_easycom_uni_nav_bar2 + _easycom_uni_steps2 + _easycom_uni_icons2)();
+  const _easycom_uni_steps2 = common_vendor.resolveComponent("uni-steps");
+  (_easycom_uni_icons2 + _easycom_uni_steps2)();
 }
-const _easycom_uni_nav_bar = () => "../../uni_modules/uni-nav-bar/components/uni-nav-bar/uni-nav-bar.js";
-const _easycom_uni_steps = () => "../../uni_modules/uni-steps/components/uni-steps/uni-steps.js";
 const _easycom_uni_icons = () => "../../uni_modules/uni-icons/components/uni-icons/uni-icons.js";
+const _easycom_uni_steps = () => "../../uni_modules/uni-steps/components/uni-steps/uni-steps.js";
 if (!Math) {
-  (_easycom_uni_nav_bar + _easycom_uni_steps + _easycom_uni_icons)();
+  (_easycom_uni_icons + _easycom_uni_steps)();
 }
 function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
   return common_vendor.e({
-    a: common_vendor.o($options.handleBack),
+    a: $data.statusBarHeight + "px",
     b: common_vendor.p({
-      ["left-icon"]: "left",
-      title: "诗歌创作",
-      border: false,
-      ["status-bar"]: true,
-      fixed: true
+      type: "back",
+      size: "24",
+      color: "#333"
     }),
-    c: common_vendor.p({
+    c: common_vendor.o((...args) => $options.goBack && $options.goBack(...args)),
+    d: common_vendor.p({
       options: $data.steps,
       active: $data.currentStep,
-      direction: "column",
+      direction: "row",
       activeColor: "#FF9500"
     }),
-    d: $data.currentStep === 0
+    e: $data.currentStep === 0
   }, $data.currentStep === 0 ? common_vendor.e({
-    e: !$data.imageUrl
+    f: !$data.imageUrl
   }, !$data.imageUrl ? {
-    f: common_vendor.p({
+    g: common_vendor.p({
       type: "camera-filled",
       size: "48",
       color: "#666"
     }),
-    g: common_vendor.o((...args) => $options.chooseImage && $options.chooseImage(...args))
+    h: common_vendor.o((...args) => $options.chooseImage && $options.chooseImage(...args))
   } : {
-    h: $data.imageUrl,
-    i: common_vendor.o((...args) => $options.chooseImage && $options.chooseImage(...args))
+    i: $data.imageUrl,
+    j: common_vendor.o((...args) => $options.chooseImage && $options.chooseImage(...args))
   }, {
-    j: !$data.imageUrl,
-    k: common_vendor.o((...args) => $options.analyzeImage && $options.analyzeImage(...args))
+    k: !$data.imageUrl,
+    l: common_vendor.o((...args) => $options.analyzeImage && $options.analyzeImage(...args))
   }) : {}, {
-    l: $data.currentStep === 1
+    m: $data.currentStep === 1
   }, $data.currentStep === 1 ? {
-    m: common_vendor.f($data.keywords, (tag, index, i0) => {
+    n: common_vendor.f($data.keywords, (tag, index, i0) => {
       return {
         a: common_vendor.t(tag),
         b: index,
@@ -187,7 +201,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
         d: common_vendor.o(($event) => $options.toggleTag(tag), index)
       };
     }),
-    n: common_vendor.f($data.poetryStyles, (style, index, i0) => {
+    o: common_vendor.f($data.poetryStyles, (style, index, i0) => {
       return {
         a: common_vendor.t(style),
         b: index,
@@ -195,16 +209,16 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
         d: common_vendor.o(($event) => $options.selectStyle(style), index)
       };
     }),
-    o: !$options.canCreate,
-    p: common_vendor.o((...args) => $options.createPoem && $options.createPoem(...args))
+    p: !$options.canCreate,
+    q: common_vendor.o((...args) => $options.createPoem && $options.createPoem(...args))
   } : {}, {
-    q: $data.currentStep === 2
+    r: $data.currentStep === 2
   }, $data.currentStep === 2 ? {
-    r: common_vendor.t($data.generatedPoem),
-    s: common_vendor.o((...args) => $options.copyPoem && $options.copyPoem(...args)),
-    t: common_vendor.o((...args) => $options.shareCard && $options.shareCard(...args)),
-    v: common_vendor.o((...args) => $options.restart && $options.restart(...args)),
-    w: common_vendor.o((...args) => $options.goHome && $options.goHome(...args))
+    s: common_vendor.t($data.generatedPoem),
+    t: common_vendor.o((...args) => $options.copyPoem && $options.copyPoem(...args)),
+    v: common_vendor.o((...args) => $options.shareCard && $options.shareCard(...args)),
+    w: common_vendor.o((...args) => $options.restart && $options.restart(...args)),
+    x: common_vendor.o((...args) => $options.goHome && $options.goHome(...args))
   } : {});
 }
 const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render], ["__file", "E:/Project/Front/memhouse_front/pages/poetry/index.vue"]]);
