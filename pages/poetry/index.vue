@@ -92,6 +92,55 @@
       </view>
     </view>
   </view>
+  <canvas 
+    id="shareCanvas"
+    canvas-id="shareCanvas" 
+    :style="{
+      width: '600px',
+      height: canvasHeight + 'px',
+      position: 'fixed',
+      left: '-9999px',
+      visibility: 'hidden'
+    }"
+  />
+  
+  <!-- 分享卡片预览弹窗 -->
+  <view 
+    class="share-preview-mask"
+    v-if="showSharePreview"
+    @tap="closeSharePreview"
+  >
+    <view 
+      class="share-preview-content"
+      @tap.stop
+    >
+      <view class="preview-header">
+        <text class="preview-title">分享卡片预览</text>
+        <view 
+          class="preview-close"
+          @tap="closeSharePreview"
+        >
+          <uni-icons type="close" size="24" color="#333"/>
+        </view>
+      </view>
+      
+      <view class="preview-content">
+        <image 
+          v-if="shareImagePath"
+          :src="shareImagePath" 
+          mode="widthFix"
+          class="preview-image"
+        />
+      </view>
+      
+      <view class="preview-actions">
+        <button 
+          class="preview-btn save-btn"
+          @tap="saveToAlbum"
+        >保存到相册</button>
+      </view>
+    </view>
+  </view>
 </template>
 
 <script>
@@ -116,6 +165,9 @@ export default {
       isDirectEntry: false,
       isPageShowing: true,
       isTransitioning: false,
+      showSharePreview: false,
+      shareImagePath: '',
+      canvasHeight: 900,
     }
   },
   
@@ -300,8 +352,105 @@ export default {
       })
     },
     
-    shareCard() {
-      // TODO: 实分享卡片功能
+    async shareCard() {
+      try {
+        uni.showLoading({ title: '生成中...' });
+        
+        const ctx = uni.createCanvasContext('shareCanvas', this);
+        const canvasWidth = 600;
+        
+        // 计算诗歌需要的高度
+        const poemLines = this.generatedPoem.split('\n');
+        const lineHeight = 70; // 行高
+        const poemStartY = 420; // 诗歌起始y坐标
+        const footerHeight = 120; // 底部装饰和名称的高度
+        const bottomPadding = 80; // 底部额外留白
+        
+        // 计算诗歌实际需要的总高度
+        const poemHeight = poemLines.length * lineHeight;
+        // 计算画布需要的最小高度 = 诗歌起始位置 + 诗歌高度 + 底部装饰区域 + 底部边距
+        const minHeight = poemStartY + poemHeight + footerHeight + bottomPadding;
+        
+        // 更新画布高度
+        this.canvasHeight = Math.max(900, minHeight);
+        
+        // 等待视图更新
+        await this.$nextTick();
+        
+        // 绘制背景
+        ctx.setFillStyle('#FFF5E7');
+        ctx.fillRect(0, 0, canvasWidth, this.canvasHeight);
+        
+        // 绘制图片白色背景
+        ctx.setFillStyle('#FFFFFF');
+        ctx.fillRect(40, 40, 520, 320);
+        
+        // 加载并绘制图片
+        await new Promise((resolve, reject) => {
+          ctx.drawImage(this.imageUrl, 50, 50, 500, 300);
+          ctx.draw(true, resolve);
+        });
+        
+        // 设置诗歌文字样式
+        ctx.setFillStyle('#333333');
+        ctx.setFontSize(36);
+        ctx.setTextAlign('center');
+        ctx.font = '36px KaiTi';
+        
+        // 绘制诗歌文本
+        let y = poemStartY;
+        poemLines.forEach(line => {
+          ctx.fillText(line, canvasWidth / 2, y);
+          y += lineHeight;
+        });
+        
+        // 绘制底部装饰和小程序名称
+        const footerY = this.canvasHeight - footerHeight + 40; // 调整底部位置
+        ctx.setFillStyle('#FF9500');
+        ctx.fillRect(50, footerY, 500, 2);
+        
+        ctx.setFontSize(24);
+        ctx.setFillStyle('#666666');
+        ctx.fillText('AI诗歌创作', canvasWidth / 2, footerY + 40);
+        
+        // 完成绘制
+        ctx.draw(true);
+        
+        // 等待绘制完成后转换为图片路径
+        setTimeout(async () => {
+          try {
+            const res = await new Promise((resolve, reject) => {
+              uni.canvasToTempFilePath({
+                canvasId: 'shareCanvas',
+                width: canvasWidth,
+                height: this.canvasHeight, // 使用计算后的高度
+                destWidth: canvasWidth * 2, // 2倍分辨率，提高清晰度
+                destHeight: this.canvasHeight * 2,
+                success: resolve,
+                fail: reject
+              }, this);
+            });
+            
+            this.shareImagePath = res.tempFilePath;
+            this.showSharePreview = true;
+            uni.hideLoading();
+            
+          } catch (error) {
+            uni.hideLoading();
+            uni.showToast({
+              title: '生成失败',
+              icon: 'none'
+            });
+          }
+        }, 300); // 增加等待时间，确保绘制完成
+        
+      } catch (error) {
+        uni.hideLoading();
+        uni.showToast({
+          title: '生成失败',
+          icon: 'none'
+        });
+      }
     },
     
     restart() {
@@ -326,6 +475,41 @@ export default {
           delta: pages.length - 1 // 返回到首页
         })
       }
+    },
+    
+    closeSharePreview() {
+      this.showSharePreview = false;
+      this.shareImagePath = '';
+    },
+    
+    async saveToAlbum() {
+      try {
+        uni.showLoading({ title: '保存中...' });
+        
+        await new Promise((resolve, reject) => {
+          uni.saveImageToPhotosAlbum({
+            filePath: this.shareImagePath,
+            success: resolve,
+            fail: reject
+          });
+        });
+        
+        uni.hideLoading();
+        uni.showToast({
+          title: '已保存到相册',
+          icon: 'success'
+        });
+        
+        // 关闭预览
+        this.closeSharePreview();
+        
+      } catch (error) {
+        uni.hideLoading();
+        uni.showToast({
+          title: '保存失败',
+          icon: 'none'
+        });
+      }
     }
   }
 }
@@ -341,6 +525,8 @@ export default {
   right: 0;
   bottom: 0;
   z-index: 999;
+  display: flex;
+  flex-direction: column;
   
   .header {
     width: 100%;
@@ -398,6 +584,10 @@ export default {
     padding-top: calc(44px + var(--status-bar-height));
     padding-left: 30rpx;
     padding-right: 30rpx;
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 30rpx;
     
     .steps-container {
       margin: 40rpx 0;
@@ -432,6 +622,25 @@ export default {
   
   .step-content {
     margin: 30rpx 0;
+    
+    &:last-child {
+      min-height: calc(100vh - 44px - var(--status-bar-height) - 140rpx);
+      display: flex;
+      flex-direction: column;
+      
+      .poem-display {
+        flex: 1;
+        margin-bottom: 30rpx;
+      }
+      
+      .action-buttons {
+        margin-top: auto;
+        position: relative;
+        z-index: 2;
+        background: #FFF5E7;
+        padding-top: 20rpx;
+      }
+    }
   }
   
   .upload-box {
@@ -661,5 +870,90 @@ export default {
 
 .transitioning {
   transition: all 0.3s ease;
+}
+
+.share-preview-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 180rpx;
+  
+  .share-preview-content {
+    width: 80%;
+    max-width: 600rpx;
+    max-height: calc(90vh - 180rpx);
+    background: #fff;
+    border-radius: 24rpx;
+    display: flex;
+    flex-direction: column;
+    
+    .preview-header {
+      padding: 30rpx 30rpx 20rpx;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fff;
+      border-radius: 24rpx 24rpx 0 0;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      
+      .preview-title {
+        font-size: 32rpx;
+        font-weight: 500;
+        color: #333;
+      }
+      
+      .preview-close {
+        padding: 10rpx;
+      }
+    }
+    
+    .preview-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 30rpx;
+      -webkit-overflow-scrolling: touch;
+      
+      .preview-image {
+        width: 100%;
+        border-radius: 12rpx;
+        box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+      }
+    }
+    
+    .preview-actions {
+      padding: 20rpx 30rpx 30rpx;
+      background: #fff;
+      border-radius: 0 0 24rpx 24rpx;
+      position: sticky;
+      bottom: 0;
+      z-index: 10;
+      
+      .preview-btn {
+        width: 100%;
+        height: 88rpx;
+        line-height: 88rpx;
+        border-radius: 44rpx;
+        font-size: 32rpx;
+        
+        &.save-btn {
+          background: #FF9500;
+          color: #fff;
+          
+          &:active {
+            opacity: 0.9;
+          }
+        }
+      }
+    }
+  }
 }
 </style> 

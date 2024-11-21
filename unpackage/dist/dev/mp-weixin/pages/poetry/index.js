@@ -19,7 +19,10 @@ const _sfc_main = {
       generatedPoem: "",
       isDirectEntry: false,
       isPageShowing: true,
-      isTransitioning: false
+      isTransitioning: false,
+      showSharePreview: false,
+      shareImagePath: "",
+      canvasHeight: 900
     };
   },
   computed: {
@@ -169,7 +172,77 @@ const _sfc_main = {
         }
       });
     },
-    shareCard() {
+    async shareCard() {
+      try {
+        common_vendor.index.showLoading({ title: "生成中..." });
+        const ctx = common_vendor.index.createCanvasContext("shareCanvas", this);
+        const canvasWidth = 600;
+        const poemLines = this.generatedPoem.split("\n");
+        const lineHeight = 70;
+        const poemStartY = 420;
+        const footerHeight = 120;
+        const bottomPadding = 80;
+        const poemHeight = poemLines.length * lineHeight;
+        const minHeight = poemStartY + poemHeight + footerHeight + bottomPadding;
+        this.canvasHeight = Math.max(900, minHeight);
+        await this.$nextTick();
+        ctx.setFillStyle("#FFF5E7");
+        ctx.fillRect(0, 0, canvasWidth, this.canvasHeight);
+        ctx.setFillStyle("#FFFFFF");
+        ctx.fillRect(40, 40, 520, 320);
+        await new Promise((resolve, reject) => {
+          ctx.drawImage(this.imageUrl, 50, 50, 500, 300);
+          ctx.draw(true, resolve);
+        });
+        ctx.setFillStyle("#333333");
+        ctx.setFontSize(36);
+        ctx.setTextAlign("center");
+        ctx.font = "36px KaiTi";
+        let y = poemStartY;
+        poemLines.forEach((line) => {
+          ctx.fillText(line, canvasWidth / 2, y);
+          y += lineHeight;
+        });
+        const footerY = this.canvasHeight - footerHeight + 40;
+        ctx.setFillStyle("#FF9500");
+        ctx.fillRect(50, footerY, 500, 2);
+        ctx.setFontSize(24);
+        ctx.setFillStyle("#666666");
+        ctx.fillText("AI诗歌创作", canvasWidth / 2, footerY + 40);
+        ctx.draw(true);
+        setTimeout(async () => {
+          try {
+            const res = await new Promise((resolve, reject) => {
+              common_vendor.index.canvasToTempFilePath({
+                canvasId: "shareCanvas",
+                width: canvasWidth,
+                height: this.canvasHeight,
+                // 使用计算后的高度
+                destWidth: canvasWidth * 2,
+                // 2倍分辨率，提高清晰度
+                destHeight: this.canvasHeight * 2,
+                success: resolve,
+                fail: reject
+              }, this);
+            });
+            this.shareImagePath = res.tempFilePath;
+            this.showSharePreview = true;
+            common_vendor.index.hideLoading();
+          } catch (error) {
+            common_vendor.index.hideLoading();
+            common_vendor.index.showToast({
+              title: "生成失败",
+              icon: "none"
+            });
+          }
+        }, 300);
+      } catch (error) {
+        common_vendor.index.hideLoading();
+        common_vendor.index.showToast({
+          title: "生成失败",
+          icon: "none"
+        });
+      }
     },
     restart() {
       this.currentStep = 0;
@@ -189,6 +262,34 @@ const _sfc_main = {
         common_vendor.index.navigateBack({
           delta: pages.length - 1
           // 返回到首页
+        });
+      }
+    },
+    closeSharePreview() {
+      this.showSharePreview = false;
+      this.shareImagePath = "";
+    },
+    async saveToAlbum() {
+      try {
+        common_vendor.index.showLoading({ title: "保存中..." });
+        await new Promise((resolve, reject) => {
+          common_vendor.index.saveImageToPhotosAlbum({
+            filePath: this.shareImagePath,
+            success: resolve,
+            fail: reject
+          });
+        });
+        common_vendor.index.hideLoading();
+        common_vendor.index.showToast({
+          title: "已保存到相册",
+          icon: "success"
+        });
+        this.closeSharePreview();
+      } catch (error) {
+        common_vendor.index.hideLoading();
+        common_vendor.index.showToast({
+          title: "保存失败",
+          icon: "none"
         });
       }
     }
@@ -265,8 +366,25 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
     w: common_vendor.o((...args) => $options.restart && $options.restart(...args)),
     x: common_vendor.o((...args) => $options.goHome && $options.goHome(...args))
   } : {}, {
-    y: $data.isPageShowing && !$data.isTransitioning
-  });
+    y: $data.isPageShowing && !$data.isTransitioning,
+    z: $data.canvasHeight + "px",
+    A: $data.showSharePreview
+  }, $data.showSharePreview ? common_vendor.e({
+    B: common_vendor.p({
+      type: "close",
+      size: "24",
+      color: "#333"
+    }),
+    C: common_vendor.o((...args) => $options.closeSharePreview && $options.closeSharePreview(...args)),
+    D: $data.shareImagePath
+  }, $data.shareImagePath ? {
+    E: $data.shareImagePath
+  } : {}, {
+    F: common_vendor.o((...args) => $options.saveToAlbum && $options.saveToAlbum(...args)),
+    G: common_vendor.o(() => {
+    }),
+    H: common_vendor.o((...args) => $options.closeSharePreview && $options.closeSharePreview(...args))
+  }) : {});
 }
 const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render], ["__file", "E:/Project/Front/memhouse_front/pages/poetry/index.vue"]]);
 wx.createPage(MiniProgramPage);

@@ -32,6 +32,8 @@
   right: 0;
   bottom: 0;
   z-index: 999;
+  display: flex;
+  flex-direction: column;
 }
 .poetry-creation .header {
   width: 100%;
@@ -82,6 +84,10 @@
   padding-top: calc(44px + var(--status-bar-height));
   padding-left: 30rpx;
   padding-right: 30rpx;
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 30rpx;
 }
 .poetry-creation .content .steps-container {
   margin: 40rpx 0;
@@ -108,6 +114,22 @@
 }
 .poetry-creation .step-content {
   margin: 30rpx 0;
+}
+.poetry-creation .step-content:last-child {
+  min-height: calc(100vh - 44px - var(--status-bar-height) - 140rpx);
+  display: flex;
+  flex-direction: column;
+}
+.poetry-creation .step-content:last-child .poem-display {
+  flex: 1;
+  margin-bottom: 30rpx;
+}
+.poetry-creation .step-content:last-child .action-buttons {
+  margin-top: auto;
+  position: relative;
+  z-index: 2;
+  background: #FFF5E7;
+  padding-top: 20rpx;
 }
 .poetry-creation .upload-box {
   margin: 30rpx 0;
@@ -306,4 +328,80 @@
 }
 .transitioning {
   transition: all 0.3s ease;
+}
+.share-preview-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 180rpx;
+}
+.share-preview-mask .share-preview-content {
+  width: 80%;
+  max-width: 600rpx;
+  max-height: calc(90vh - 180rpx);
+  background: #fff;
+  border-radius: 24rpx;
+  display: flex;
+  flex-direction: column;
+}
+.share-preview-mask .share-preview-content .preview-header {
+  padding: 30rpx 30rpx 20rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.share-preview-mask .share-preview-content .preview-header .preview-title {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #333;
+}
+.share-preview-mask .share-preview-content .preview-header .preview-close {
+  padding: 10rpx;
+}
+.share-preview-mask .share-preview-content .preview-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 30rpx;
+  -webkit-overflow-scrolling: touch;
+}
+.share-preview-mask .share-preview-content .preview-content .preview-image {
+  width: 100%;
+  border-radius: 12rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+}
+.share-preview-mask .share-preview-content .preview-actions {
+  padding: 20rpx 30rpx 30rpx;
+  background: #fff;
+  border-radius: 0 0 24rpx 24rpx;
+  position: -webkit-sticky;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+.share-preview-mask .share-preview-content .preview-actions .preview-btn {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  border-radius: 44rpx;
+  font-size: 32rpx;
+}
+.share-preview-mask .share-preview-content .preview-actions .preview-btn.save-btn {
+  background: #FF9500;
+  color: #fff;
+}
+.share-preview-mask .share-preview-content .preview-actions .preview-btn.save-btn:active {
+  opacity: 0.9;
 }
