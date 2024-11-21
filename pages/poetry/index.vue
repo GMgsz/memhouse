@@ -1,5 +1,8 @@
 <template>
-  <view class="poetry-creation" v-show="isPageShowing">
+  <view 
+    class="poetry-creation" 
+    v-show="isPageShowing && !isTransitioning"
+  >
     <!-- 顶部导航栏 -->
     <view class="header">
       <view class="status-bar" :style="{ height: statusBarHeight + 'px' }"></view>
@@ -112,6 +115,7 @@ export default {
       generatedPoem: '',
       isDirectEntry: false,
       isPageShowing: true,
+      isTransitioning: false,
     }
   },
   
@@ -257,13 +261,18 @@ export default {
     
     async createPoem() {
       try {
+        this.isTransitioning = true;
         uni.showLoading({ title: '创作中...' });
         const result = await createPoem(this.selectedTags, this.selectedStyle);
         
         if (result && result.status === 'success') {
-          // 使用格式化方法处理诗歌
           this.generatedPoem = this.formatPoem(result.poem);
-          this.currentStep = 2;
+          this.$nextTick(() => {
+            this.currentStep = 2;
+            setTimeout(() => {
+              this.isTransitioning = false;
+            }, 100);
+          });
         } else {
           throw new Error(result?.message || '未能生成诗歌');
         }
@@ -274,6 +283,7 @@ export default {
           icon: 'none',
           duration: 2000
         });
+        this.isTransitioning = false;
       } finally {
         uni.hideLoading();
       }
@@ -330,7 +340,7 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 100;
+  z-index: 999;
   
   .header {
     width: 100%;
@@ -647,5 +657,9 @@ export default {
       margin-bottom: 20rpx;
     }
   }
+}
+
+.transitioning {
+  transition: all 0.3s ease;
 }
 </style> 

@@ -18,7 +18,8 @@ const _sfc_main = {
       selectedStyle: "",
       generatedPoem: "",
       isDirectEntry: false,
-      isPageShowing: true
+      isPageShowing: true,
+      isTransitioning: false
     };
   },
   computed: {
@@ -132,11 +133,17 @@ const _sfc_main = {
     },
     async createPoem() {
       try {
+        this.isTransitioning = true;
         common_vendor.index.showLoading({ title: "创作中..." });
         const result = await utils_aiService.createPoem(this.selectedTags, this.selectedStyle);
         if (result && result.status === "success") {
           this.generatedPoem = this.formatPoem(result.poem);
-          this.currentStep = 2;
+          this.$nextTick(() => {
+            this.currentStep = 2;
+            setTimeout(() => {
+              this.isTransitioning = false;
+            }, 100);
+          });
         } else {
           throw new Error((result == null ? void 0 : result.message) || "未能生成诗歌");
         }
@@ -147,6 +154,7 @@ const _sfc_main = {
           icon: "none",
           duration: 2e3
         });
+        this.isTransitioning = false;
       } finally {
         common_vendor.index.hideLoading();
       }
@@ -257,7 +265,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
     w: common_vendor.o((...args) => $options.restart && $options.restart(...args)),
     x: common_vendor.o((...args) => $options.goHome && $options.goHome(...args))
   } : {}, {
-    y: $data.isPageShowing
+    y: $data.isPageShowing && !$data.isTransitioning
   });
 }
 const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render], ["__file", "E:/Project/Front/memhouse_front/pages/poetry/index.vue"]]);

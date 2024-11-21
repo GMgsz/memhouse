@@ -31,7 +31,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 100;
+  z-index: 999;
 }
 .poetry-creation .header {
   width: 100%;
@@ -303,4 +303,7 @@
 }
 .steps-container .uni-steps .uni-steps__column-container {
   margin-bottom: 20rpx;
+}
+.transitioning {
+  transition: all 0.3s ease;
 }
