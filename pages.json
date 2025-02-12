@@ -13,6 +13,12 @@
 				"navigationStyle": "custom",
 				"navigationBarTitleText": "诗歌创作"
 			}
+		},
+		{
+			"path": "pages/test/oss-test",
+			"style": {
+				"navigationBarTitleText": "OSS上传测试"
+			}
 		}
 	],
 	"globalStyle": {

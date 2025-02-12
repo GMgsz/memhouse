@@ -80,7 +80,7 @@
             </view>
             
             <!-- 每日训练 -->
-            <view class="entry-item" hover-class="entry-hover" @tap="showUnderDevelopment">
+            <view class="entry-item" hover-class="entry-hover" @tap="navigateToTest">
               <view class="entry-left">
                 <text class="entry-title">每日训练</text>
                 <text class="entry-desc">提升创作的能力</text>
@@ -257,6 +257,21 @@ export default {
           console.error('导航失败:', err)
           uni.showToast({
             title: '页面开发中',
+            icon: 'none'
+          })
+        }
+      })
+    },
+    navigateToTest() {
+      uni.navigateTo({
+        url: '/pages/test/oss-test',  // 确保路径正确
+        success: (res) => {
+          console.log('跳转成功');
+        },
+        fail: (err) => {
+          console.error('跳转失败:', err)
+          uni.showToast({
+            title: '跳转失败：' + err.errMsg,
             icon: 'none'
           })
         }

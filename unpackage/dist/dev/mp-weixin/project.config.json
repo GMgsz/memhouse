@@ -7,8 +7,8 @@
   "setting": {
     "urlCheck": false,
     "es6": true,
-    "postcss": false,
-    "minified": false,
+    "postcss": true,
+    "minified": true,
     "newFeature": true,
     "bigPackageSizeSupport": true,
     "babelSetting": {
@@ -19,7 +19,7 @@
   },
   "compileType": "miniprogram",
   "libVersion": "3.6.5",
-  "appid": "touristappid",
+  "appid": "wx744000484cc52b2e",
   "projectname": "memhouse_front",
   "condition": {},
   "editorSetting": {

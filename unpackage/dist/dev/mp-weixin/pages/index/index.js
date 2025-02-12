@@ -148,6 +148,22 @@ const _sfc_main = {
         }
       });
     },
+    navigateToTest() {
+      common_vendor.index.navigateTo({
+        url: "/pages/test/oss-test",
+        // 确保路径正确
+        success: (res) => {
+          console.log("跳转成功");
+        },
+        fail: (err) => {
+          console.error("跳转失败:", err);
+          common_vendor.index.showToast({
+            title: "跳转失败：" + err.errMsg,
+            icon: "none"
+          });
+        }
+      });
+    },
     showUnderDevelopment() {
       common_vendor.index.showToast({
         title: "页面开发中",
@@ -218,7 +234,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
       size: "28",
       color: "#6B7280"
     }),
-    s: common_vendor.o((...args) => $options.showUnderDevelopment && $options.showUnderDevelopment(...args)),
+    s: common_vendor.o((...args) => $options.navigateToTest && $options.navigateToTest(...args)),
     t: common_vendor.p({
       type: "flag",
       size: "28",

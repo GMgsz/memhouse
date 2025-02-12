@@ -1,7 +1,8 @@
 {
   "pages": [
     "pages/index/index",
-    "pages/poetry/index"
+    "pages/poetry/index",
+    "pages/test/oss-test"
   ],
   "window": {
     "navigationBarTextStyle": "black",
@@ -9,5 +10,18 @@
     "navigationBarBackgroundColor": "#FFFFFF",
     "backgroundColor": "#FFFFFF"
   },
+  "networkTimeout": {
+    "request": 60000,
+    "uploadFile": 600000
+  },
+  "lazyCodeLoading": "requiredComponents",
+  "permission": {
+    "scope.writePhotosAlbum": {
+      "desc": "用于保存上传的图片"
+    }
+  },
+  "requiredPrivateInfos": [
+    "chooseLocation"
+  ],
   "usingComponents": {}
 }

@@ -1,4 +1,5 @@
 import App from './App'
+import request from './utils/request'
 
 // #ifndef VUE3
 import Vue from 'vue'
@@ -15,8 +16,7 @@ app.$mount()
 import { createSSRApp } from 'vue'
 export function createApp() {
   const app = createSSRApp(App)
-  return {
-    app
-  }
+  app.config.globalProperties.$request = request
+  return { app }
 }
 // #endif
