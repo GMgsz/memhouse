@@ -150,7 +150,7 @@ const _sfc_main = {
     },
     navigateToTest() {
       common_vendor.index.navigateTo({
-        url: "/pages/test/oss-test",
+        url: "/pages/test/device-upload",
         // 确保路径正确
         success: (res) => {
           console.log("跳转成功");

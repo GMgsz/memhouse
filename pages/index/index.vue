@@ -264,7 +264,7 @@ export default {
     },
     navigateToTest() {
       uni.navigateTo({
-        url: '/pages/test/oss-test',  // 确保路径正确
+        url: '/pages/test/device-upload',  // 确保路径正确
         success: (res) => {
           console.log('跳转成功');
         },

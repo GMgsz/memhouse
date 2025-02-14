@@ -18,10 +18,10 @@
 // };
 
 // export default request;
+const baseURL = 'http://localhost:789';
+
 const request = (options) => {
-  const baseURL = 'http://localhost:789';
-  
-  // 只对 GET 请求特殊处理参数
+  // GET请求处理
   let url = baseURL + options.url;
   if (options.method === 'GET' && options.data) {
     const queryString = Object.entries(options.data)
@@ -34,7 +34,6 @@ const request = (options) => {
     uni.request({
       url: url,
       method: options.method || 'GET',
-      // POST等其他请求仍然使用原来的data方式
       data: options.method === 'GET' ? undefined : options.data,
       header: options.header || {},
       success: (res) => {
@@ -47,4 +46,28 @@ const request = (options) => {
   });
 };
 
-export default request;
+// 添加文件上传方法
+const uploadFile = (options) => {
+  const url = baseURL + options.url;
+  
+  return new Promise((resolve, reject) => {
+    uni.uploadFile({
+      url: url,
+      filePath: options.filePath,
+      name: options.name || 'file',
+      formData: options.formData || {},
+      header: options.header || {},
+      success: (res) => {
+        resolve(res);
+      },
+      fail: (err) => {
+        reject(err);
+      }
+    });
+  });
+};
+
+export default {
+  request,
+  uploadFile
+};

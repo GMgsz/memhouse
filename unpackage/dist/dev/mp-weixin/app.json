@@ -2,7 +2,8 @@
   "pages": [
     "pages/index/index",
     "pages/poetry/index",
-    "pages/test/oss-test"
+    "pages/test/oss-test",
+    "pages/test/device-upload"
   ],
   "window": {
     "navigationBarTextStyle": "black",

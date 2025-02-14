@@ -6,6 +6,7 @@ if (!Math) {
   "./pages/index/index.js";
   "./pages/poetry/index.js";
   "./pages/test/oss-test.js";
+  "./pages/test/device-upload.js";
 }
 const _sfc_main = {
   onLaunch: function() {

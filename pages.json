@@ -19,6 +19,12 @@
 			"style": {
 				"navigationBarTitleText": "OSS上传测试"
 			}
+		},
+		{
+			"path": "pages/test/device-upload",
+			"style": {
+				"navigationBarTitleText": "图片上传测试"
+			}
 		}
 	],
 	"globalStyle": {
