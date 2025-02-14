@@ -18,7 +18,8 @@
 // };
 
 // export default request;
-const baseURL = 'http://localhost:789';
+// const baseURL = 'http://localhost:789';
+const baseURL = 'http://119.45.18.3:789';
 
 const request = (options) => {
   // GET请求处理

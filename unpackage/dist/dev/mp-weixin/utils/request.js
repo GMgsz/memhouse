@@ -1,6 +1,6 @@
 "use strict";
 const common_vendor = require("../common/vendor.js");
-const baseURL = "http://localhost:789";
+const baseURL = "http://119.45.18.3:789";
 const request = (options) => {
   let url = baseURL + options.url;
   if (options.method === "GET" && options.data) {
