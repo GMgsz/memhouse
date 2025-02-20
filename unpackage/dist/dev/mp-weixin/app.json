@@ -2,8 +2,9 @@
   "pages": [
     "pages/index/index",
     "pages/poetry/index",
-    "pages/test/oss-test",
-    "pages/test/device-upload"
+    "pages/create/oss-test",
+    "pages/create/device-upload",
+    "pages/thumbs/index"
   ],
   "window": {
     "navigationBarTextStyle": "black",

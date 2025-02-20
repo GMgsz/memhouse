@@ -1,18 +1,25 @@
 "use strict";
 const common_vendor = require("../common/vendor.js");
-const baseURL = "http://119.45.18.3:789";
+const baseURL = "http://localhost:789";
 const request = (options) => {
   let url = baseURL + options.url;
-  if (options.method === "GET" && options.data) {
-    const queryString = Object.entries(options.data).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join("&");
+  if (options.params) {
+    const queryString = Object.entries(options.params).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join("&");
     url += (url.includes("?") ? "&" : "?") + queryString;
   }
+  console.log("完整请求URL:", url);
+  console.log("请求方法:", options.method);
+  console.log("请求体:", options.data);
   return new Promise((resolve, reject) => {
     common_vendor.index.request({
       url,
       method: options.method || "GET",
-      data: options.method === "GET" ? void 0 : options.data,
-      header: options.header || {},
+      data: options.data,
+      header: {
+        "Content-Type": "application/json",
+        // 添加Content-Type头
+        ...options.header
+      },
       success: (res) => {
         resolve(res);
       },
@@ -40,8 +47,8 @@ const uploadFile = (options) => {
     });
   });
 };
-const request$1 = {
+const requestUtil = {
   request,
   uploadFile
 };
-exports.request = request$1;
+exports.requestUtil = requestUtil;

@@ -148,9 +148,25 @@ const _sfc_main = {
         }
       });
     },
-    navigateToTest() {
+    navigateToCreate() {
       common_vendor.index.navigateTo({
-        url: "/pages/test/device-upload",
+        url: "/pages/create/device-upload",
+        // 确保路径正确
+        success: (res) => {
+          console.log("跳转成功");
+        },
+        fail: (err) => {
+          console.error("跳转失败:", err);
+          common_vendor.index.showToast({
+            title: "跳转失败：" + err.errMsg,
+            icon: "none"
+          });
+        }
+      });
+    },
+    navigateToThumbs() {
+      common_vendor.index.navigateTo({
+        url: "/pages/thumbs/index",
         // 确保路径正确
         success: (res) => {
           console.log("跳转成功");
@@ -234,13 +250,13 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
       size: "28",
       color: "#6B7280"
     }),
-    s: common_vendor.o((...args) => $options.navigateToTest && $options.navigateToTest(...args)),
+    s: common_vendor.o((...args) => $options.navigateToCreate && $options.navigateToCreate(...args)),
     t: common_vendor.p({
       type: "flag",
       size: "28",
       color: "#6B7280"
     }),
-    v: common_vendor.o((...args) => $options.showUnderDevelopment && $options.showUnderDevelopment(...args))
+    v: common_vendor.o((...args) => $options.navigateToThumbs && $options.navigateToThumbs(...args))
   });
 }
 const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render], ["__file", "E:/Project/Front/memhouse_front/pages/index/index.vue"]]);

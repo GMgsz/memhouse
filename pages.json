@@ -15,15 +15,21 @@
 			}
 		},
 		{
-			"path": "pages/test/oss-test",
+			"path": "pages/create/oss-test",
 			"style": {
 				"navigationBarTitleText": "OSS上传测试"
 			}
 		},
 		{
-			"path": "pages/test/device-upload",
+			"path": "pages/create/device-upload",
 			"style": {
 				"navigationBarTitleText": "图片上传测试"
+			}
+		},
+		{
+			"path": "pages/thumbs/index",
+			"style": {
+				"navigationBarTitleText": "缩略图浏览"
 			}
 		}
 	],
