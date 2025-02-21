@@ -11,117 +11,75 @@ if (!Math) {
 }
 const _sfc_main = {
   globalData: {
-    stsCredentials: null,
-    // STS凭证
-    stsExpireTime: null,
-    // 凭证过期时间
     deviceId: "123456",
     // 设备ID默认值
     userId: "default_user",
     // 用户ID默认值
-    ossClient: null,
-    // 添加OSS客户端
-    endpoint: "oss-cn-beijing.aliyuncs.com",
-    // OSS endpoint
-    bucket: "photograph-bucket",
-    // OSS bucket名称
-    signedUrls: /* @__PURE__ */ new Map()
-    // 用于缓存签名URL
-  },
-  onLaunch: function() {
-    this.initStsCredentials();
+    previewUrlCache: /* @__PURE__ */ new Map()
+    // 预览图URL缓存
   },
   methods: {
-    // 初始化 STS 凭证
-    async initStsCredentials() {
-      try {
-        await this.updateStsCredentials();
-      } catch (error) {
-        console.error("初始化 STS 凭证失败:", error);
-        common_vendor.index.showToast({
-          title: "获取访问凭证失败",
-          icon: "none"
-        });
+    // 清理过期的预览图缓存
+    cleanExpiredCache() {
+      const now = Date.now();
+      for (const [key, value] of this.globalData.previewUrlCache) {
+        if (value.expireTime <= now) {
+          this.globalData.previewUrlCache.delete(key);
+        }
       }
     },
-    // 更新 STS 凭证
-    async updateStsCredentials() {
+    // 获取预览图URL（带缓存）
+    async getPreviewUrl(thumbInfo) {
+      var _a, _b;
+      const cacheKey = thumbInfo.thumbId;
+      const now = Date.now();
+      this.cleanExpiredCache();
+      const cached = this.globalData.previewUrlCache.get(cacheKey);
+      if (cached && cached.expireTime > now) {
+        return cached.signedUrl;
+      }
       try {
         const res = await utils_request.requestUtil.request({
-          url: "/photograph/api/get-sts",
-          // 更新为正确的接口路径
-          method: "GET",
-          data: {
-            deviceId: this.globalData.deviceId,
-            userId: this.globalData.userId
-          }
+          url: "/photograph/api/preview_image",
+          method: "POST",
+          params: { deviceId: this.globalData.deviceId },
+          data: thumbInfo
         });
-        if (res.data && res.data.success) {
-          const credentials = res.data.data;
-          this.globalData.stsCredentials = {
-            accessKeyId: credentials.accessKeyId,
-            accessKeySecret: credentials.accessKeySecret,
-            securityToken: credentials.securityToken,
-            regionId: credentials.regionId
-          };
-          this.globalData.stsExpireTime = new Date(credentials.expiration).getTime();
-          console.log("STS凭证更新成功，过期时间:", credentials.expiration);
-          return this.globalData.stsCredentials;
-        } else {
-          throw new Error("获取STS凭证失败: " + (res.data.message || "未知错误"));
+        if ((_a = res.data) == null ? void 0 : _a.success) {
+          const signedUrl = res.data.data.signedUrl;
+          const expireTime = this.parseExpirationFromUrl(signedUrl);
+          this.globalData.previewUrlCache.set(cacheKey, {
+            signedUrl,
+            expireTime
+          });
+          return signedUrl;
         }
+        throw new Error(((_b = res.data) == null ? void 0 : _b.message) || "获取预览图失败");
       } catch (error) {
-        console.error("更新STS凭证失败:", error);
+        console.error("获取预览图失败:", error);
         throw error;
       }
     },
-    // 获取有效的 STS 凭证
-    async getValidStsCredentials() {
-      const now = Date.now();
-      const expireTime = this.globalData.stsExpireTime;
-      if (!this.globalData.stsCredentials || !expireTime || now + 10 * 60 * 1e3 >= expireTime) {
-        console.log("STS凭证不存在或即将过期，开始更新");
-        return await this.updateStsCredentials();
-      }
-      return this.globalData.stsCredentials;
-    },
-    // 获取OSS客户端
-    async getOssClient() {
+    // 从URL中解析过期时间
+    parseExpirationFromUrl(url) {
       try {
-        const credentials = await this.getValidStsCredentials();
-        this.globalData.ossClient = new common_vendor.OSS({
-          accessKeyId: credentials.accessKeyId,
-          accessKeySecret: credentials.accessKeySecret,
-          stsToken: credentials.securityToken,
-          region: credentials.regionId,
-          bucket: this.globalData.bucket,
-          endpoint: this.globalData.endpoint
-        });
-        return this.globalData.ossClient;
-      } catch (error) {
-        console.error("获取OSS客户端失败:", error);
-        throw error;
-      }
-    },
-    // 获取OSS资源URL
-    async getOssUrl(objectKey) {
-      try {
-        const now = Date.now();
-        const cachedUrl = this.globalData.signedUrls.get(objectKey);
-        if (cachedUrl && cachedUrl.expireTime - now > this.globalData.urlRefreshTime) {
-          return cachedUrl.url;
+        const queryString = url.split("?")[1];
+        if (!queryString) {
+          throw new Error("URL没有参数部分");
         }
-        const client = await this.getOssClient();
-        const expires = Math.floor((this.globalData.stsExpireTime - now - 10 * 60 * 1e3) / 1e3);
-        const url = await client.signatureUrl(objectKey, { expires });
-        this.globalData.signedUrls.set(objectKey, {
-          url,
-          expireTime: now + expires * 1e3
-        });
-        return url;
+        const params = queryString.split("&").reduce((acc, param) => {
+          const [key, value] = param.split("=");
+          acc[key] = value;
+          return acc;
+        }, {});
+        const expires = params["Expires"];
+        if (!expires) {
+          throw new Error("URL中没有Expires参数");
+        }
+        return parseInt(expires) * 1e3;
       } catch (error) {
-        console.error("获取OSS URL失败:", error);
-        throw error;
+        console.error("解析URL过期时间失败:", error);
+        return Date.now() + 3600 * 1e3;
       }
     }
   }

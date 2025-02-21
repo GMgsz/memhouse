@@ -45,9 +45,11 @@ export default {
       deviceId: '123456',
       total: 0,
       pages: 0,  // 添加总页数记录
-      stsCredentials: null,
       previewLoading: false, // 新增：预览加载状态
-      app: null // 添加app引用
+      app: null, // 添加app引用
+      urlRefreshThreshold: 5 * 60 * 1000, // 设置提前5分钟更新URL
+      urlExpirationMap: new Map(), // 存储URL过期时间
+      urlUpdateInterval: null, // 用于存储定时器
     }
   },
   
@@ -71,7 +73,6 @@ export default {
   
   async onLoad() {
     this.app = getApp()
-    await this.ensureValidSts()
     this.initLoad()
   },
   
@@ -82,50 +83,19 @@ export default {
   },
   
   methods: {
-    // 确保有有效的 STS 凭证
-    async ensureValidSts() {
-      try {
-        const app = getApp()
-        this.stsCredentials = await app.getValidStsCredentials()
-      } catch (error) {
-        console.error('获取STS凭证失败:', error)
-        uni.showToast({
-          title: '获取访问凭证失败',
-          icon: 'none'
-        })
-      }
-    },
-    
     // 处理缩略图数据，添加签名URL
     async processThumbsData(records) {
-      const processedRecords = []
-      for (const record of records) {
-        try {
-          // 从完整URL中提取objectKey
-          const objectKey = record.thumbOssPath.replace('https://photograph-bucket.oss-cn-beijing.aliyuncs.com/', '')
-          // 获取签名URL
-          const signedUrl = await this.app.getOssUrl(objectKey)
-          processedRecords.push({
-            ...record,
-            signedUrl
-          })
-        } catch (error) {
-          console.error('处理缩略图URL失败:', error, record)
-          // 如果获取签名URL失败，使用原始URL
-          processedRecords.push({
-            ...record,
-            signedUrl: record.thumbOssPath
-          })
-        }
-      }
-      return processedRecords
+      // 现在后端会直接返回带签名的URL，所以不需要额外处理
+      return records.map(record => ({
+        ...record,
+        signedUrl: record.signedUrl // 使用后端返回的带签名URL
+      }))
     },
     
     async loadThumbsData() {
       if (this.isLoading) return
       
       try {
-        await this.ensureValidSts()
         this.isLoading = true
         this.loadingStatus = 'loading'
         
@@ -142,7 +112,7 @@ export default {
           const { records, total, pages, current } = res.data.data
           
           if (records && records.length > 0) {
-            // 处理缩略图数据，添加签名URL
+            // 处理缩略图数据
             const processedRecords = await this.processThumbsData(records)
             
             if (this.current === 1) {
@@ -168,11 +138,6 @@ export default {
       } catch (error) {
         console.error('加载失败:', error)
         this.loadingStatus = 'more'
-        
-        if (error.message?.includes('AccessDenied')) {
-          await this.app.updateStsCredentials()
-          return this.loadThumbsData()
-        }
       } finally {
         this.isLoading = false
       }
@@ -254,47 +219,153 @@ export default {
       
       try {
         this.previewLoading = true
-        uni.showLoading({ title: '加载中...' })
         
-        const res = await requestUtil.request({
-          url: '/photograph/api/preview_image',
-          method: 'POST',
-          params: { deviceId: this.deviceId },
-          data: thumbInfo
-        })
+        // 1. 检查缓存
+        const cachedUrl = this.app.globalData.previewUrlCache.get(thumbInfo.thumbId)
+        const now = Date.now()
         
-        if (res.data?.success) {
-          const previewUrl = res.data.data.previewUrl
-          // 从OSS URL中提取objectKey
-          const objectKey = previewUrl.split('.com/')[1]
-          // 获取签名URL
-          const signedUrl = await this.app.getOssUrl(objectKey)
-          
-          uni.previewImage({
-            urls: [signedUrl],
-            current: 0,
-            success: () => console.log('预览成功'),
-            fail: (err) => {
-              console.error('预览失败:', err)
-              uni.showToast({
-                title: '预览失败',
-                icon: 'none'
-              })
-            }
-          })
-        } else {
-          throw new Error(res.data?.message || '获取预览图失败')
+        // 2. 如果有有效缓存，直接使用
+        if (cachedUrl && cachedUrl.expireTime > now) {
+          await this.showPreviewImage(cachedUrl.signedUrl)
+          return
         }
+        
+        // 3. 如果没有缓存或缓存过期，检查设备在线状态
+        const isDeviceOnline = await this.checkDeviceStatus()
+        if (!isDeviceOnline) {
+          uni.showToast({
+            title: '设备不在线',
+            icon: 'none'
+          })
+          return
+        }
+        
+        // 4. 设备在线，获取新的预览图URL
+        uni.showLoading({ title: '加载中...' })
+        const previewUrl = await this.app.getPreviewUrl(thumbInfo)
+        await this.showPreviewImage(previewUrl)
+        
       } catch (error) {
         console.error('预览图片失败:', error)
         uni.showToast({
-          title: '获取预览图失败',
+          title: error.message || '获取预览图失败',
           icon: 'none'
         })
       } finally {
         this.previewLoading = false
         uni.hideLoading()
       }
+    },
+    
+    // 新增：检查设备在线状态方法
+    async checkDeviceStatus() {
+      try {
+        const res = await requestUtil.request({
+          url: '/photograph/api/check_device',
+          method: 'GET',
+          data: {
+            deviceId: this.deviceId
+          }
+        })
+        return res.data
+      } catch (err) {
+        console.error('检查设备状态失败:', err)
+        return false
+      }
+    },
+    
+    // 新增：显示预览图方法
+    async showPreviewImage(url) {
+      return new Promise((resolve, reject) => {
+        uni.previewImage({
+          urls: [url],
+          current: 0,
+          success: () => {
+            console.log('预览成功')
+            resolve()
+          },
+          fail: (err) => {
+            console.error('预览失败:', err)
+            reject(new Error('预览失败'))
+          }
+        })
+      })
+    },
+    
+    // 修改 checkAndUpdateUrls 方法
+    async checkAndUpdateUrls() {
+      if (!this.thumbsList.length) return
+      
+      const now = Date.now()
+      // 收集需要更新的缩略图信息
+      const needUpdateThumbs = this.thumbsList.filter(thumb => {
+        const expireTime = this.app.parseExpirationFromUrl(thumb.signedUrl)
+        return expireTime - now <= this.urlRefreshThreshold
+      })
+      
+      if (needUpdateThumbs.length > 0) {
+        try {
+          // 批量请求更新URL
+          const res = await requestUtil.request({
+            url: '/photograph/api/batch_update_signed_urls',
+            method: 'POST',
+            data: {
+              thumbInfos: needUpdateThumbs.map(thumb => ({
+                thumbId: thumb.thumbId,
+                thumbOssPath: thumb.thumbOssPath
+              }))
+            }
+          })
+          
+          if (res.data?.success) {
+            const updatedUrls = res.data.data
+            // 批量更新URL
+            needUpdateThumbs.forEach(thumb => {
+              if (updatedUrls[thumb.thumbId]) {
+                thumb.signedUrl = updatedUrls[thumb.thumbId]
+                // 更新过期时间映射
+                this.urlExpirationMap.set(
+                  thumb.thumbOssPath,
+                  this.app.parseExpirationFromUrl(updatedUrls[thumb.thumbId])
+                )
+              }
+            })
+          }
+        } catch (error) {
+          console.error('批量更新签名URL失败:', error)
+        }
+      }
+    },
+    
+    // 添加定时检查URL是否需要更新的方法
+    mounted() {
+      // 每分钟检查一次URL是否需要更新
+      this.urlUpdateInterval = setInterval(() => {
+        this.checkAndUpdateUrls()
+      }, 60000)
+    },
+    
+    beforeDestroy() {
+      // 清理定时器
+      if (this.urlUpdateInterval) {
+        clearInterval(this.urlUpdateInterval)
+      }
+    }
+  },
+  watch: {
+    // 监听缩略图列表变化
+    thumbInfoList: {
+      handler(newList) {
+        if (!newList) return;
+        newList.forEach(thumbInfo => {
+          // 存储每个URL的过期时间
+          this.urlExpirationMap.set(
+            thumbInfo.thumbOssPath,
+            this.app.parseExpirationFromUrl(thumbInfo.signedUrl)
+          );
+        });
+      },
+      immediate: true
     }
   }
 }

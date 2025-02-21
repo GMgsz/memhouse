@@ -14,11 +14,16 @@ const _sfc_main = {
       total: 0,
       pages: 0,
       // 添加总页数记录
-      stsCredentials: null,
       previewLoading: false,
       // 新增：预览加载状态
-      app: null
+      app: null,
       // 添加app引用
+      urlRefreshThreshold: 5 * 60 * 1e3,
+      // 设置提前5分钟更新URL
+      urlExpirationMap: /* @__PURE__ */ new Map(),
+      // 存储URL过期时间
+      urlUpdateInterval: null
+      // 用于存储定时器
     };
   },
   computed: {
@@ -39,7 +44,6 @@ const _sfc_main = {
   },
   async onLoad() {
     this.app = getApp();
-    await this.ensureValidSts();
     this.initLoad();
   },
   // 监听页面滚动到底部
@@ -48,46 +52,19 @@ const _sfc_main = {
     this.loadMore();
   },
   methods: {
-    // 确保有有效的 STS 凭证
-    async ensureValidSts() {
-      try {
-        const app = getApp();
-        this.stsCredentials = await app.getValidStsCredentials();
-      } catch (error) {
-        console.error("获取STS凭证失败:", error);
-        common_vendor.index.showToast({
-          title: "获取访问凭证失败",
-          icon: "none"
-        });
-      }
-    },
     // 处理缩略图数据，添加签名URL
     async processThumbsData(records) {
-      const processedRecords = [];
-      for (const record of records) {
-        try {
-          const objectKey = record.thumbOssPath.replace("https://photograph-bucket.oss-cn-beijing.aliyuncs.com/", "");
-          const signedUrl = await this.app.getOssUrl(objectKey);
-          processedRecords.push({
-            ...record,
-            signedUrl
-          });
-        } catch (error) {
-          console.error("处理缩略图URL失败:", error, record);
-          processedRecords.push({
-            ...record,
-            signedUrl: record.thumbOssPath
-          });
-        }
-      }
-      return processedRecords;
+      return records.map((record) => ({
+        ...record,
+        signedUrl: record.signedUrl
+        // 使用后端返回的带签名URL
+      }));
     },
     async loadThumbsData() {
-      var _a, _b;
+      var _a;
       if (this.isLoading)
         return;
       try {
-        await this.ensureValidSts();
         this.isLoading = true;
         this.loadingStatus = "loading";
         const res = await utils_request.requestUtil.request({
@@ -124,10 +101,6 @@ const _sfc_main = {
       } catch (error) {
         console.error("加载失败:", error);
         this.loadingStatus = "more";
-        if ((_b = error.message) == null ? void 0 : _b.includes("AccessDenied")) {
-          await this.app.updateStsCredentials();
-          return this.loadThumbsData();
-        }
       } finally {
         this.isLoading = false;
       }
@@ -192,47 +165,136 @@ const _sfc_main = {
     },
     // 修改预览图处理方法
     async handlePreviewImage(thumbInfo) {
-      var _a, _b;
       if (this.previewLoading)
         return;
       try {
         this.previewLoading = true;
-        common_vendor.index.showLoading({ title: "加载中..." });
-        const res = await utils_request.requestUtil.request({
-          url: "/photograph/api/preview_image",
-          method: "POST",
-          params: { deviceId: this.deviceId },
-          data: thumbInfo
-        });
-        if ((_a = res.data) == null ? void 0 : _a.success) {
-          const previewUrl = res.data.data.previewUrl;
-          const objectKey = previewUrl.split(".com/")[1];
-          const signedUrl = await this.app.getOssUrl(objectKey);
-          common_vendor.index.previewImage({
-            urls: [signedUrl],
-            current: 0,
-            success: () => console.log("预览成功"),
-            fail: (err) => {
-              console.error("预览失败:", err);
-              common_vendor.index.showToast({
-                title: "预览失败",
-                icon: "none"
-              });
-            }
-          });
-        } else {
-          throw new Error(((_b = res.data) == null ? void 0 : _b.message) || "获取预览图失败");
+        const cachedUrl = this.app.globalData.previewUrlCache.get(thumbInfo.thumbId);
+        const now = Date.now();
+        if (cachedUrl && cachedUrl.expireTime > now) {
+          await this.showPreviewImage(cachedUrl.signedUrl);
+          return;
         }
+        const isDeviceOnline = await this.checkDeviceStatus();
+        if (!isDeviceOnline) {
+          common_vendor.index.showToast({
+            title: "设备不在线",
+            icon: "none"
+          });
+          return;
+        }
+        common_vendor.index.showLoading({ title: "加载中..." });
+        const previewUrl = await this.app.getPreviewUrl(thumbInfo);
+        await this.showPreviewImage(previewUrl);
       } catch (error) {
         console.error("预览图片失败:", error);
         common_vendor.index.showToast({
-          title: "获取预览图失败",
+          title: error.message || "获取预览图失败",
           icon: "none"
         });
       } finally {
         this.previewLoading = false;
         common_vendor.index.hideLoading();
       }
+    },
+    // 新增：检查设备在线状态方法
+    async checkDeviceStatus() {
+      try {
+        const res = await utils_request.requestUtil.request({
+          url: "/photograph/api/check_device",
+          method: "GET",
+          data: {
+            deviceId: this.deviceId
+          }
+        });
+        return res.data;
+      } catch (err) {
+        console.error("检查设备状态失败:", err);
+        return false;
+      }
+    },
+    // 新增：显示预览图方法
+    async showPreviewImage(url) {
+      return new Promise((resolve, reject) => {
+        common_vendor.index.previewImage({
+          urls: [url],
+          current: 0,
+          success: () => {
+            console.log("预览成功");
+            resolve();
+          },
+          fail: (err) => {
+            console.error("预览失败:", err);
+            reject(new Error("预览失败"));
+          }
+        });
+      });
+    },
+    // 修改 checkAndUpdateUrls 方法
+    async checkAndUpdateUrls() {
+      var _a;
+      if (!this.thumbsList.length)
+        return;
+      const now = Date.now();
+      const needUpdateThumbs = this.thumbsList.filter((thumb) => {
+        const expireTime = this.app.parseExpirationFromUrl(thumb.signedUrl);
+        return expireTime - now <= this.urlRefreshThreshold;
+      });
+      if (needUpdateThumbs.length > 0) {
+        try {
+          const res = await utils_request.requestUtil.request({
+            url: "/photograph/api/batch_update_signed_urls",
+            method: "POST",
+            data: {
+              thumbInfos: needUpdateThumbs.map((thumb) => ({
+                thumbId: thumb.thumbId,
+                thumbOssPath: thumb.thumbOssPath
+              }))
+            }
+          });
+          if ((_a = res.data) == null ? void 0 : _a.success) {
+            const updatedUrls = res.data.data;
+            needUpdateThumbs.forEach((thumb) => {
+              if (updatedUrls[thumb.thumbId]) {
+                thumb.signedUrl = updatedUrls[thumb.thumbId];
+                this.urlExpirationMap.set(
+                  thumb.thumbOssPath,
+                  this.app.parseExpirationFromUrl(updatedUrls[thumb.thumbId])
+                );
+              }
+            });
+          }
+        } catch (error) {
+          console.error("批量更新签名URL失败:", error);
+        }
+      }
+    },
+    // 添加定时检查URL是否需要更新的方法
+    mounted() {
+      this.urlUpdateInterval = setInterval(() => {
+        this.checkAndUpdateUrls();
+      }, 6e4);
+    },
+    beforeDestroy() {
+      if (this.urlUpdateInterval) {
+        clearInterval(this.urlUpdateInterval);
+      }
+    }
+  },
+  watch: {
+    // 监听缩略图列表变化
+    thumbInfoList: {
+      handler(newList) {
+        if (!newList)
+          return;
+        newList.forEach((thumbInfo) => {
+          this.urlExpirationMap.set(
+            thumbInfo.thumbOssPath,
+            this.app.parseExpirationFromUrl(thumbInfo.signedUrl)
+          );
+        });
+      },
+      immediate: true
     }
   }
 };

@@ -1,134 +1,93 @@
 <script>
 import request from '@/utils/request.js'
-import OSS from 'ali-oss'
 
 export default {
 	globalData: {
-		stsCredentials: null, // STS凭证
-		stsExpireTime: null,  // 凭证过期时间
 		deviceId: '123456',    // 设备ID默认值
 		userId: 'default_user', // 用户ID默认值
-		ossClient: null, // 添加OSS客户端
-		endpoint: 'oss-cn-beijing.aliyuncs.com', // OSS endpoint
-		bucket: 'photograph-bucket', // OSS bucket名称
-		signedUrls: new Map() // 用于缓存签名URL
-	},
-	
-	onLaunch: function() {
-		// 应用启动时获取 STS 凭证
-		this.initStsCredentials()
+		previewUrlCache: new Map(), // 预览图URL缓存
 	},
 	
 	methods: {
-		// 初始化 STS 凭证
-		async initStsCredentials() {
-			try {
-				await this.updateStsCredentials()
-			} catch (error) {
-				console.error('初始化 STS 凭证失败:', error)
-				uni.showToast({
-					title: '获取访问凭证失败',
-					icon: 'none'
-				})
+		// 清理过期的预览图缓存
+		cleanExpiredCache() {
+			const now = Date.now()
+			for (const [key, value] of this.globalData.previewUrlCache) {
+				if (value.expireTime <= now) {
+					this.globalData.previewUrlCache.delete(key)
+				}
 			}
 		},
-		
-		// 更新 STS 凭证
-		async updateStsCredentials() {
+
+		// 获取预览图URL（带缓存）
+		async getPreviewUrl(thumbInfo) {
+			const cacheKey = thumbInfo.thumbId
+			const now = Date.now()
+			
+			// 清理过期缓存
+			this.cleanExpiredCache()
+			
+			const cached = this.globalData.previewUrlCache.get(cacheKey)
+			
+			// 检查缓存是否存在且未过期
+			if (cached && cached.expireTime > now) {
+				return cached.signedUrl
+			}
+			
+			// 缓存不存在或已过期，重新请求
 			try {
 				const res = await request.request({
-					url: '/photograph/api/get-sts', // 更新为正确的接口路径
-					method: 'GET',
-					data: {
-						deviceId: this.globalData.deviceId,
-						userId: this.globalData.userId
-					}
+					url: '/photograph/api/preview_image',
+					method: 'POST',
+					params: { deviceId: this.globalData.deviceId },
+					data: thumbInfo
 				})
 				
-				if (res.data && res.data.success) {
-					const credentials = res.data.data
+				if (res.data?.success) {
+					const signedUrl = res.data.data.signedUrl
+					const expireTime = this.parseExpirationFromUrl(signedUrl)
 					
-					// 更新全局凭证
-					this.globalData.stsCredentials = {
-						accessKeyId: credentials.accessKeyId,
-						accessKeySecret: credentials.accessKeySecret,
-						securityToken: credentials.securityToken,
-						regionId: credentials.regionId
-					}
+					// 更新缓存
+					this.globalData.previewUrlCache.set(cacheKey, {
+						signedUrl,
+						expireTime
+					})
 					
-					// 设置过期时间
-					this.globalData.stsExpireTime = new Date(credentials.expiration).getTime()
-					
-					console.log('STS凭证更新成功，过期时间:', credentials.expiration)
-					return this.globalData.stsCredentials
-				} else {
-					throw new Error('获取STS凭证失败: ' + (res.data.message || '未知错误'))
+					return signedUrl
 				}
+				throw new Error(res.data?.message || '获取预览图失败')
 			} catch (error) {
-				console.error('更新STS凭证失败:', error)
+				console.error('获取预览图失败:', error)
 				throw error
 			}
 		},
 		
-		// 获取有效的 STS 凭证
-		async getValidStsCredentials() {
-			const now = Date.now()
-			const expireTime = this.globalData.stsExpireTime
-			
-			// 如果凭证不存在或即将过期（预留10分钟缓冲），则更新凭证
-			if (!this.globalData.stsCredentials || !expireTime || now + 10 * 60 * 1000 >= expireTime) {
-				console.log('STS凭证不存在或即将过期，开始更新')
-				return await this.updateStsCredentials()
-			}
-			
-			return this.globalData.stsCredentials
-		},
-		
-		// 获取OSS客户端
-		async getOssClient() {
+		// 从URL中解析过期时间
+		parseExpirationFromUrl(url) {
 			try {
-				const credentials = await this.getValidStsCredentials()
-				
-				// 创建或更新OSS客户端
-				this.globalData.ossClient = new OSS({
-					accessKeyId: credentials.accessKeyId,
-					accessKeySecret: credentials.accessKeySecret,
-					stsToken: credentials.securityToken,
-					region: credentials.regionId,
-					bucket: this.globalData.bucket,
-					endpoint: this.globalData.endpoint
-				})
-				
-				return this.globalData.ossClient
-			} catch (error) {
-				console.error('获取OSS客户端失败:', error)
-				throw error
-			}
-		},
-		
-		// 获取OSS资源URL
-		async getOssUrl(objectKey) {
-			try {
-				const now = Date.now()
-				const cachedUrl = this.globalData.signedUrls.get(objectKey)
-				
-				if (cachedUrl && cachedUrl.expireTime - now > this.globalData.urlRefreshTime) {
-					return cachedUrl.url
+				// 获取问号后面的参数字符串
+				const queryString = url.split('?')[1]
+				if (!queryString) {
+					throw new Error('URL没有参数部分')
 				}
 				
-				const client = await this.getOssClient()
-				const expires = Math.floor((this.globalData.stsExpireTime - now - 10 * 60 * 1000) / 1000)
-				const url = await client.signatureUrl(objectKey, { expires })
+				// 手动解析参数
+				const params = queryString.split('&').reduce((acc, param) => {
+					const [key, value] = param.split('=')
+					acc[key] = value
+					return acc
+				}, {})
 				
-				this.globalData.signedUrls.set(objectKey, {
-					url,
-					expireTime: now + expires * 1000
-				})
+				const expires = params['Expires']
+				if (!expires) {
+					throw new Error('URL中没有Expires参数')
+				}
 				
-				return url
+				return parseInt(expires) * 1000 // 转换为毫秒时间戳
 			} catch (error) {
-				console.error('获取OSS URL失败:', error)
-				throw error
+				console.error('解析URL过期时间失败:', error)
+				// 默认设置1小时过期
+				return Date.now() + 3600 * 1000
 			}
 		}
 	}
